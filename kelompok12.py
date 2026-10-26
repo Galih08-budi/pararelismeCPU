@@ -37,11 +37,6 @@ class ILPHazardSimulator:
 
             # 2. Check WAR (Write After Read): Instruksi j menulis ke register yang dibaca instruksi i sebelumnya
             if dest:
-                for src in sources:
-                    # Cek apakah register tujuan ditulis oleh j, tapi sebelumnya dibaca oleh i (i < j)
-                    if dest in reg_table and i_id in reg_table[dest]['readers']:
-                        # Cari instruksi pembaca sebelum penulisan ini
-                        pass
                 # Implementasi sederhana pelacakan pembaca aktif
                 if dest in reg_table:
                     for reader_id in reg_table[dest]['readers']:
@@ -85,14 +80,27 @@ class ILPHazardSimulator:
 # --- CONTOH IMPLEMENTASI KASUS HAZARD (RAW, WAR, WAW) ---
 simulator = ILPHazardSimulator()
 
-print("=== SIMULASI KASUS HAZARD ILP ===")
-# Masukkan rangkaian instruksi pengujian
-simulator.add_instruction("I1", "ADD", "R1", "R2", "R3")  # Menulis R1, Membaca R2, R3
-simulator.add_instruction("I2", "SUB", "R4", "R1", "R5")  # RAW: Membaca R1 dari I1
-simulator.add_instruction("I3", "ADD", "R1", "R6", "R7")  # WAW: Menulis ulang R1 dari I1 | WAR jika dibaca sebelumnya
-simulator.add_instruction("I4", "OR",  "R2", "R4", "R1")  # WAR: Menulis R2 yang dibaca I1 (atau tergantung urutan baca)
+# --- CONTOH IMPLEMENTASI KASUS HAZARD (RAW, WAR, WAW) ---
 
-# Jalankan Deteksi
+simulator = ILPHazardSimulator()
+
+print("=== SIMULASI KASUS HAZARD ILP ===")
+
+# I1: Menulis R1, membaca R2 dan R3
+simulator.add_instruction("I1", "ADD", "R1", "R2", "R3")
+
+# I2: Membaca R1 yang ditulis I1 -> RAW
+simulator.add_instruction("I2", "SUB", "R4", "R1", "R5")
+
+# I3: Menulis ulang R1 yang sebelumnya ditulis I1 -> WAW
+# I3 juga menulis R1 setelah I2 membaca R1 -> WAR
+simulator.add_instruction("I3", "ADD", "R1", "R6", "R7")
+
+# I4: Menulis R2 yang sebelumnya dibaca I1 -> WAR
+simulator.add_instruction("I4", "OR", "R2", "R4", "R1")
+
+# Jalankan deteksi
 detected_hazards = simulator.detect_hazards()
+
 for h in detected_hazards:
     print(f"[{h['type']}] -> {h['cause']}")
